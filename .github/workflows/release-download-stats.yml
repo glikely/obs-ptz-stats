@@ -1,0 +1,75 @@
+name: release-download-stats
+
+# The GitHub API only exposes a running total for release asset downloads
+# on glikely/obs-ptz (release.assets[].download_count), with no history.
+# This workflow takes a daily snapshot of every release's per-asset
+# download count and appends it to a CSV on a dedicated
+# `release-download-stats` branch of this repository, so the trend over
+# time can be reconstructed later.
+#
+# This repo is the *data repository*; glikely/obs-ptz is the repo being
+# measured. Release download counts are public data, so no secret is
+# needed here beyond the default GITHUB_TOKEN (used only to read the
+# public API and to push the snapshot back into this repo).
+
+on:
+  schedule:
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+
+concurrency: release-download-stats
+
+permissions:
+  contents: write
+
+env:
+  STATS_REPO: glikely/obs-ptz
+
+jobs:
+  snapshot:
+    name: snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Switch to (or create) data branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin release-download-stats >/dev/null 2>&1; then
+            git fetch origin release-download-stats:release-download-stats
+            git checkout release-download-stats
+          else
+            git checkout --orphan release-download-stats
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+      - name: Collect release download stats
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-download-stats
+          csv=release-download-stats/downloads.csv
+          if [ ! -f "$csv" ]; then
+            echo "snapshot_utc,tag_name,asset_name,download_count" > "$csv"
+          fi
+          snapshot=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          gh api "repos/${STATS_REPO}/releases" --paginate \
+            --jq '.[] | .tag_name as $tag | .assets[] | [$tag, .name, .download_count] | @csv' \
+          | while IFS= read -r row; do
+              echo "\"$snapshot\",$row" >> "$csv"
+            done
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git add release-download-stats/downloads.csv
+          if git diff --cached --quiet; then
+            echo "No new data to commit."
+          else
+            git commit -m "Snapshot release download stats"
+            git push origin release-download-stats
+          fi

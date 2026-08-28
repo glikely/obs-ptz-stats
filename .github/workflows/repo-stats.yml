@@ -1,0 +1,36 @@
+name: repo-stats
+
+# Collects a daily snapshot of glikely/obs-ptz's repository traffic (views,
+# clones, referrers, popular paths, stars, forks) and aggregates it into an
+# HTML/PDF report. GitHub's own Traffic insights only retain 14 days of
+# history; this workflow accumulates snapshots indefinitely on the
+# `github-repo-stats` branch of this repository.
+# See https://github.com/jgehrcke/github-repo-stats
+#
+# This repo is the *data repository*; glikely/obs-ptz is the *stats
+# repository* being measured. Keeping them separate means these daily bot
+# commits never show up in obs-ptz's own history.
+#
+# Requires a repository secret named GHRS_GITHUB_API_TOKEN containing a
+# personal access token with `repo` scope. It needs to be able to read the
+# traffic API for glikely/obs-ptz and push commits here, so a PAT owned by
+# an account with push access to obs-ptz works. Create it, then add it
+# under Settings > Secrets and variables > Actions in this repo.
+
+on:
+  schedule:
+    # Once per day, towards the end of the day (hours are UTC) so the most
+    # recent snapshot is most meaningful.
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+
+jobs:
+  repo-stats:
+    name: repo-stats
+    runs-on: ubuntu-latest
+    steps:
+      - name: run-ghrs
+        uses: jgehrcke/github-repo-stats@v1.4.2
+        with:
+          repository: glikely/obs-ptz
+          ghtoken: ${{ secrets.GHRS_GITHUB_API_TOKEN }}
