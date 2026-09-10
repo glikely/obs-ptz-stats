@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/glikely/obs-ptz,1885,1150
+/glikely/obs-ptz/releases/tag/v0.19.0,1786,1076
+/glikely/obs-ptz/releases/tag/v0.19.1,1689,1171
+/glikely/obs-ptz/releases,1016,664
+/glikely/obs-ptz/releases/tag/v0.19.0-rc1,192,148
+/glikely/obs-ptz/issues,139,83
+/glikely/obs-ptz/compare/v0.19.0...v0.19.1,99,84
+/glikely/obs-ptz/releases/tag/v0.18.2,81,55
+/glikely/obs-ptz/pulls,70,45
+/glikely/obs-ptz/tree/main/.github,59,44
